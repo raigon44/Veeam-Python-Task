@@ -12,10 +12,10 @@ It needs the following parameters (which have to provided through command line):
 Author: Raigon Augustin
 Date: 22.09.2023
 """
+import hashlib
 import os
 import logging
 import time
-from hashlib import md5
 import shutil
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor
@@ -35,15 +35,13 @@ class FolderSynchronize:
     FolderSynchronize class
 
     This class have methods which can copy files in parallel, check if the file in 2 directories are the same, and to synchronize between
-    a source and a replica folder
+    the source and a replica folders
     """
     def __init__(self, source_folder_path: str, dest_folder_path: str):
         """
-        Constructor of the FolderSynchronize class. Initialize the src, destination, log folder locations, and syncronization
-        interval
+        Constructor of the FolderSynchronize class. Initialize the source, destination locations
         :param source_folder_path:
         :param dest_folder_path:
-        :param log_file_path:
         """
         self.source_folder_path = source_folder_path
         self.dest_folder_path = dest_folder_path
@@ -58,26 +56,40 @@ class FolderSynchronize:
         return
 
     @staticmethod
-    def is_file_modified(source_file: str, destination_file: str):  # TODO: This is not working as expected right now
+    def create_hash_file(file_path: str):
         """
-        This function checks if the file present in the source is modified after the last copy
+        This function creates the hash file for a given file. To avoid inefficiencies while creating hash for large files
+        here file is read in chunks of a certain size (defined in the config file)
+        :param file_path:
+        :return: hash file
+        """
+        file_md5 = hashlib.md5()
+        with open(file_path, 'rb') as fp:
+            while True:
+                data = fp.read(FolderSyncConfig.hashing_file_chunk_size)
+                if not data:
+                    break
+                file_md5.update(data)
+        return file_md5
+
+    def is_file_modified(self, source_file: str, destination_file: str):
+        """
+        This function checks if the given file present in the source and replica folders are modified after the last run
         :return: True if file was modified, False otherwise
         """
-        with open(source_file, 'rb') as src_f:
-            with open(destination_file, 'rb') as dest_f:
-                if md5(src_f.read()).hexdigest() == md5(dest_f.read()).hexdigest():
-                    return True
-                else:
-                    return False
+        return self.create_hash_file(source_file).hexdigest() == self.create_hash_file(destination_file).hexdigest()
 
     @staticmethod
     def copy_file(s):
         """
-        Copies the file from source to replica
-        :param s: list containing path to source file and target location
-        :return:
+        Copies the file from source to replica folder
+        :param s: list containing path to source file, target location and field indicating if file is modified or newly created
+        :return: None
         """
-        logger.info(f'Copying file {s[0]} to {s[1]}')
+        if s[2] == 'new':
+            logger.info(f'Copying new file {s[0]} to {s[1]}')
+        else:
+            logger.info(f'Updating modified file {s[0]} to {s[1]}')
         shutil.copy2(s[0], s[1])
         return
 
@@ -89,10 +101,10 @@ class FolderSynchronize:
 
     def create_new_directory_in_replica_folder(self, source_root, source_directories):
         """
-        This function creates new
+        This function creates new directory
         :param source_root:
         :param source_directories:
-        :return:
+        :return: None
         """
         for directory in source_directories:
             src_dir = os.path.join(source_root, directory)
@@ -163,9 +175,9 @@ class FolderSynchronize:
                 src_file = os.path.join(src_root, file)
                 dest_file = os.path.join(self.dest_folder_path, os.path.relpath(src_file, self.source_folder_path))
                 if os.path.exists(dest_file):
-                    if self.is_file_modified(src_file, dest_file):  # Checks if the file has been modified after last sync
+                    if not self.is_file_modified(src_file, dest_file):  # Checks if the file has been modified after last sync
                         os.remove(dest_file)
-                        logger.info(f'Removing the old file {dest_file} from the destination')
+                        logger.info(f'Deleting the old file {dest_file} from the destination')
                         files_to_copy.append([src_file, dest_file, 'modified']) # File to copy added to the list
                     else:
                         logger.debug('File not modified. No need to copy!!')
@@ -250,8 +262,8 @@ if __name__ == '__main__':
 
         while True:
             try:
+                logger.info('Calling the folder synchronization function')
                 sync_obj.sync_source_with_replica()
-                logger.info()
             except Exception as e:
                 logger.error(e)
                 exit(1)
