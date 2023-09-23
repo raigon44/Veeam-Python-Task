@@ -171,12 +171,14 @@ class FolderSynchronize:
 
         files_to_copy = []
 
+        # Recursively traverse the source directory structure starting from 'self.source_folder_path'
+        # using os.walk() to iterate through source roots, directories, and files.
         for src_root, src_dirs, src_files in os.walk(self.source_folder_path):
 
             # Creates new directories in replica folder which are not yet present
             self.create_new_directory_in_replica_folder(src_root, src_dirs)
 
-            # Check if the file is present int replica folder and copies if not present or it has been modified
+            # Check if the file is present in the replica folder and copies if not present or it has been modified
             for file in src_files:
                 src_file = os.path.join(src_root, file)
                 dest_file = os.path.join(self.dest_folder_path, os.path.relpath(src_file, self.source_folder_path))
@@ -201,6 +203,8 @@ class FolderSynchronize:
             logger.debug('Copying the remaining files to the destination folder.')
             self.copy_files_executor(self.copy_file, files_to_copy, FolderSyncConfig.max_workers)
 
+        # Recursively traverse the replica directory structure starting from 'self.dest_folder_path'
+        # using os.walk() to iterate through source roots, directories, and files.
         for dest_root, dest_dirs, dest_files in os.walk(self.dest_folder_path, topdown=False):
 
             # Removes files in replica folder which are not present in the source folder
@@ -214,7 +218,7 @@ class FolderSynchronize:
 
 def is_input_parameters_valid():
     """
-    Checks the correctness of the input parameters entered
+    Checks the correctness of the input parameters
     :return: True if all the parameters are valid, False otherwise
     """
 
@@ -222,10 +226,20 @@ def is_input_parameters_valid():
         logger.error(f'The argument {args.src_path} should be a string.')
         return False
     if type(args.replica_path) is not str:
-        logger.error(f'The argument {args.replica_path} should be a string.')
+        logger.error(f'The argument replica_path should be a string.')
         return False
-    if type(args.sync_interval_in_seconds) is not int:
-        logger.error(f'The argument {args.sync_interval_in_seconds} should be an integer.')
+    if type(args.sync_interval_in_seconds) is not int or args.sync_interval_in_seconds < 0:
+        logger.error(f'The argument sync_interval_in_seconds should be a positive integer.')
+        return False
+    if type(FolderSyncConfig.hashing_file_chunk_size) is not int or FolderSyncConfig.hashing_file_chunk_size < 0:
+        logger.error(f'The argument hashing_file_chunk_size should be a positive integer.')
+        return False
+    if type(FolderSyncConfig.max_workers) is not int or FolderSyncConfig.max_workers < 0:
+        print(FolderSyncConfig.max_workers)
+        logger.error(f'The argument max_workers should be a positive integer.')
+        return False
+    if type(FolderSyncConfig.file_copy_batch_size) is not int or FolderSyncConfig.file_copy_batch_size < 0:
+        logger.error(f'The argument file_copy_batch_size should be a positive integer.')
         return False
     else:
         return True
@@ -251,7 +265,7 @@ if __name__ == '__main__':
     if not os.path.exists(args.log_file_path):
         logger.info(f'The log file is not available in the system. Trying to create it..')
         try:
-            with open(args.log_file_path, 'r') as log_file:
+            with open(args.log_file_path, 'w') as log_file:
                 logger.info(f'Successfully created the log file {args.log_file_path}')
         except FileNotFoundError as fe:
             logger.error(f'FileNotFoundError occurred: {fe}')
