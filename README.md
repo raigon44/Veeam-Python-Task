@@ -1,6 +1,20 @@
 # FolderSynchronize
 
-This module defines a `FolderSynchronize` class and a function to check the validity of input parameters. Run this module directly to synchronize between two folders.
+The module `FolderSynchronize.py` defines a `FolderSynchronize` class and the `is_input_parameters_valid` function to check the validity of input parameters. Run this module directly to synchronize between two folders.
+
+## Requirements
+
+I have used the python version 3.10 for this task. All the packages used for completing the task are built-in python libraries. Hence a requiements.txt file with the necessary package version are not added along with this project. Below I list down the built-in packages used.
+
+```
+"hashlib"
+'logging'
+'os'
+'time'
+'shutil'
+'argparse'
+'concurrent'
+```
 
 ## 1. Approach
 
@@ -17,6 +31,8 @@ The primary objective of this code is to synchronize files between a source fold
 - The code uses a `ThreadPoolExecutor` to manage concurrent file copying for efficiency.
 
 - It calculates MD5 hashes to determine if files have been modified since the last synchronization.
+  
+- It used `shutil` python package to peform the copying of file, which is designed to work accross different platforms and operating systems. Additionally, it preserves various metadata associated with a file.
 
 - Directories and files present in the source but not in the replica folder are created, and unwanted directories and files in the replica folder are removed.
 
@@ -28,15 +44,15 @@ To use this code for folder synchronization, follow these steps:
 
 1. Specify the source folder path, replica folder path, log file path, and synchronization interval as command-line arguments when running the script.
 
-2. If required, change the additional parameters by editing the config.py file. Set these parameters based on the resource availability.
+2. If required, change the additional parameters by editing the `config.py` file. Set these parameters based on the resource availability.
 
-  config.py file contains the following parameters:
+  `config.py` file contains the following parameters:
 
-  file_copy_batch_size: Number of files to be copied on a single batch
+  `file_copy_batch_size`: Number of files to be copied on a single batch
 
-  max_workers: The maximum number of worker threads to use for concurrent copying.
+  `max_workers`: The maximum number of worker threads to use for concurrent copying.
 
-  hashing_file_chunk_size: Holds an integer value representing the size (in bytes) of each chunk to be read from the file.
+  `hashing_file_chunk_size`: Holds an integer value representing the size (in bytes) of each chunk to be read from the file.
 
 3. The code will continuously synchronize the folders at the specified time intervals. The time interval parameter is specified in seconds.
 
