@@ -50,7 +50,7 @@ class FolderSynchronize:
     def create_directory(path_to_folder: str):
         """
         This function creates the folder in the specified path
-        :return:
+        :return: None
         """
         os.makedirs(path_to_folder)
         return
@@ -95,13 +95,19 @@ class FolderSynchronize:
 
     @staticmethod
     def copy_files_executor(copy_file, process_list, max_workers):
+        """
+        Executes file copying tasks concurrently using a ThreadPoolExecutor.
+        :param copy_file: The function responsible for copying a single file.
+        :param process_list: A list of files to be copied.
+        :param max_workers: The maximum number of worker threads to use for concurrent copying.
+        """
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             executor.map(copy_file, process_list)
         return
 
     def create_new_directory_in_replica_folder(self, source_root, source_directories):
         """
-        This function creates new directory
+        This function creates directories which are present in the source folder and not yet present in the replica folder
         :param source_root:
         :param source_directories:
         :return: None
